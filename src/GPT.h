@@ -22,7 +22,7 @@ typedef struct _GPTHeader
   uint32_t pent_num;
   uint32_t pent_size;
   uint32_t crc_part;
-  char end[420];
+  char end[4000];
 } GPTHeader;
 
 /*PARTITION ENTRY STRUCT*/

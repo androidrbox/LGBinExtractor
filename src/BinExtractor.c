@@ -8,6 +8,10 @@
  ============================================================================
  */
 
+#define _LARGEFILE64_SOURCE     /* See feature_test_macros(7) */
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "GPT.h"
 #include "BinExtractor.h"
 #include "APHeader.h"
@@ -15,6 +19,8 @@
 #include <dirent.h>
 #include <strings.h>
 #include <errno.h>
+
+extern int fileno(FILE *__stream);
 
 int main(int argc, char* args[])
 {
@@ -101,7 +107,7 @@ int displayGPT(const char* path)
   fseek(f, 0x100000, SEEK_SET);
 
   /*SKIP MBR*/
-  fseek(f, 512, SEEK_CUR);
+  fseek(f, 4096, SEEK_CUR);
 
   /*READ GPT HEADER*/
   tmp = readGPTHeader(f);
@@ -156,7 +162,7 @@ int splitBinFile(const char* path)
   GPTHeader gpt;
   GPTPartitionEntry* pes;
   int i = 0, j = 0, *parts, cur = 0;
-  _Bool addWhitespace = 0;
+  bool addWhitespace = 0;
 
   f = fopen(path, "rb");
 
@@ -166,7 +172,7 @@ int splitBinFile(const char* path)
 
   /*READ GPT HEADER*/
   puts("Reading GPT Header...");
-  fseek(f, 0x100200, SEEK_SET);
+  fseek(f, 0x101000, SEEK_SET);
   gpt = readGPTHeader(f);
 
   if(memcmp(gpt.signature, "EFI PART", 8))
@@ -260,17 +266,17 @@ int splitBinFile(const char* path)
   for(i = 0; i < aph.pent_num; i++)
   {
     /*WRITE FILE TO CUR DIR*/
-    char* name, buff[512];
+    char* name, buff[4096];
     FILE* out;
     int len = 0;
-    _Bool merged = 0;
+    bool merged = 0;
 
     name = calloc(512, sizeof(char));
 
     /*Add safe implementation Cross Platform change*/
 
     /*%d cannot ever exceed 512 char due to int limit*/
-    sprintf(name, "%d", aph.pent_arr[i].pent_id);
+    sprintf(name, "%02d", aph.pent_arr[i].pent_id);
 
     len = strlen(aph.pent_arr[i].name) + 5 /* - + .img */+ 1 /* NULL Terminating*/
     + strlen(name);
@@ -285,22 +291,22 @@ int splitBinFile(const char* path)
 
     /*END - Add safe implementation Cross Platform change*/
 
-    sprintf(name, "%d-%s.img", aph.pent_arr[i].pent_id, aph.pent_arr[i].name);
+    sprintf(name, "%02d-%s.img", aph.pent_arr[i].pent_id, aph.pent_arr[i].name);
 
     out = fopen(name, "wb");
     
     /*If file_off is not defined assume that it start after previous one ends*/
     if(aph.pent_arr[i].file_off != 0xffffffff)
-      fseek(f, aph.pent_arr[i].file_off * 512 + 0x100000, SEEK_SET);
+      lseek64(fileno(f), (uint64_t)aph.pent_arr[i].file_off * 4096 + 0x100000, SEEK_SET);
 
     printf("\tWriting File : %-20s", name);
     fflush(stdout);
 
     for(j = 0; j < aph.pent_arr[i].file_size; j++)
     {
-      /*DO 512 BLOCK*/
-      fread(buff, sizeof(char), 512, f);
-      fwrite(buff, sizeof(char), 512, out);
+      /*DO 4096 BLOCK*/
+      fread(buff, sizeof(char), 4096, f);
+      fwrite(buff, sizeof(char), 4096, out);
     }
 
     parts[cur]--;
@@ -312,23 +318,23 @@ int splitBinFile(const char* path)
 
       printf("\n\t\tAppending to File");
 
-      fseek(f, aph.pent_arr[i].file_off * 512 + 0x100000, SEEK_SET);
+      fseek(f, aph.pent_arr[i].file_off * 4096 + 0x100000, SEEK_SET);
 
       /*ADD ACTUAL WHITESPACE AND NOT META DATA*/
-      for(j = 0; j < 512; j++)
+      for(j = 0; j < 4096; j++)
         buff[j] = '\0';
 
       for(j = 0;j < aph.pent_arr[i].disk_off - aph.pent_arr[i - 1].disk_off - aph.pent_arr[i - 1].file_size; j++)
       {
-        fwrite(buff, sizeof(char), 512, out);
+        fwrite(buff, sizeof(char), 4096, out);
       }
       /*EOF - ADD ACTUAL WHITESPACE AND NOT META DATA*/
 
       for(j = 0; j < aph.pent_arr[i].file_size; j++)
       {
-        /*DO 512 BLOCK*/
-        fread(buff, sizeof(char), 512, f);
-        fwrite(buff, sizeof(char), 512, out);
+        /*DO 4096 BLOCK*/
+        fread(buff, sizeof(char), 4096, f);
+        fwrite(buff, sizeof(char), 4096, out);
       }
     }
 
@@ -349,12 +355,12 @@ int splitBinFile(const char* path)
       }
 
       /*WRITE WHITESPACE*/
-      for(j = 0; j < 512; j++)
+      for(j = 0; j < 4096; j++)
         buff[j] = '\0';
 
       for(j = 0; j <= pes[curGPTE].last_lba - curLBA; j++)
       {
-        fwrite(buff, sizeof(char), 512, out);
+        fwrite(buff, sizeof(char), 4096, out);
       }
     }
 
@@ -425,11 +431,11 @@ void printUsage()
       "-ebh file", "Extract Bin Header from file");
 }
 
-_Bool canOpenFile(const char* path)
+bool canOpenFile(const char* path)
 {
   FILE* f = fopen(path, "rb");
 
-  _Bool ret = f != NULL;
+  bool ret = f != NULL;
 
   if(!ret)
   {

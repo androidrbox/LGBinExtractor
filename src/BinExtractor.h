@@ -8,6 +8,8 @@
 #ifndef BINEXTRACTOR_H
 #define BINEXTRACTOR_H
 
+#include <stdbool.h>
+
 #if defined(_WIN32) || defined(_WIN64)
 #define PROG_NAME "BinExtractor.exe"
 #else
@@ -25,7 +27,7 @@ void skipToNextLBA(FILE* f);
 
 void printUsage();
 
-_Bool canOpenFile(const char* path);
+bool canOpenFile(const char* path);
 
 void printHex(FILE* f,const void* data,const unsigned int len);
 

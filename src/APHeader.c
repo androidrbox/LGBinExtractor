@@ -91,7 +91,7 @@ APHeader readAPHeaderA5A555AA(FILE *f)
 {
   APHeader out;
   int i = 0;
-  _Bool alternate = 0;
+  bool alternate = 0;
 
   INIT_APHEADER(out);
 
@@ -260,8 +260,9 @@ APHeader readAPHeader44DD55AA(FILE *f)
   }
 
   /*TOT FILES*/
-  if (out.magic.next->off == 0x8 && out.magic.next->next->off == 0x2000)
-    switch (out.magic.next->magic)
+  if (out.magic.next->next->off == 0x8 && out.magic.next->next->next->off == 0x2000)
+  {
+    switch (out.magic.next->next->magic)
     {
     default:
       printf("Did not detect known magic numbers!\n"
@@ -315,6 +316,7 @@ APHeader readAPHeader44DD55AA(FILE *f)
     case 0xa1ceedec: /* International G3 (D855 V10e) */
     case 0xe2c457ae: /* G Pro 2 (D838) */
     case 0xd0bc5531: /* Verizon G2 (VS980 11A) */
+    case 0x2058335a: /* V20 */
       /* Nexus 5 tot*/
       curDataBlock->next = malloc(sizeof(DataBlock));
       curDataBlock = curDataBlock->next;
@@ -328,6 +330,7 @@ APHeader readAPHeader44DD55AA(FILE *f)
 
       goto readBlocks;
     }
+  }
 
   if (out.magic.next->off == 0x600 && out.magic.next->next->off == 0x2000)
     switch (out.magic.next->magic)
