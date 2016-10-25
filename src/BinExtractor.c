@@ -191,6 +191,7 @@ int splitBinFile(const char* path)
   for(; i < aph.pent_num; i++)
     parts[i] = 1;
 
+#if 0
   /*CHECK FOR DUPLICATE NAMES OF PARTITION ENTRIES*/
   for(i = 1; i < aph.pent_num; i++)
   {
@@ -247,6 +248,7 @@ int splitBinFile(const char* path)
       break;
     }
   }
+#endif
   
 #if DEBUG
   int k = 0;
