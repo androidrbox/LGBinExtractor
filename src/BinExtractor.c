@@ -298,9 +298,14 @@ int splitBinFile(const char* path)
     out = fopen(name, "wb");
     
     /*If file_off is not defined assume that it start after previous one ends*/
-    if(aph.pent_arr[i].file_off != 0xffffffff)
-      lseek64(fileno(f), (uint64_t)aph.pent_arr[i].file_off * 4096 + 0x100000, SEEK_SET);
-
+    if(aph.pent_arr[i].file_off != 0xffffffff) 
+    {
+	#if __linux__
+		lseek64(fileno(f), (uint64_t)aph.pent_arr[i].file_off * 4096 + 0x100000, SEEK_SET);
+	#elif __APPLE__
+		lseek(fileno(f), (uint64_t)aph.pent_arr[i].file_off * 4096 + 0x100000, SEEK_SET);
+        #endif
+    }
     printf("\tWriting File : %-20s", name);
     fflush(stdout);
 
